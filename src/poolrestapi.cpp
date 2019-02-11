@@ -1,7 +1,10 @@
 #include "asyncio/coroutine.h"
+#include "asyncio/socket.h"
 #include "p2p/p2p.h"
 #include "p2putils/uriParse.h"
+__NO_DEPRECATED_BEGIN
 #include "config4cpp/Configuration.h"
+__NO_DEPRECATED_END
 
 #include "FoundBlocksQuery.h"
 
@@ -94,7 +97,7 @@ void findHandlerByUrl(QueryContext *query, ServiceContext *serviceCtx, const std
 
 }
 
-void *mainProc(void *arg)
+void mainProc(void *arg)
 {
   readerContext *reader = (readerContext*)arg;
   uint64_t msgSize;
@@ -102,8 +105,8 @@ void *mainProc(void *arg)
 
   xmstream writeStream;
   while (true) {
-    if (ioRead(reader->base, reader->socket, &msgSize, 8, afWaitAll, 0) == -1) {
-     fprintf(stderr, "<error> can't read message size, exiting..\n");
+    if (ioRead(reader->socket, &msgSize, 8, afWaitAll, 0) < 0) {
+      fprintf(stderr, "<error> can't read message size, exiting..\n");
       break;
     }
     
@@ -113,7 +116,7 @@ void *mainProc(void *arg)
       break;
     }
     
-    if (ioRead(reader->base, reader->socket, msgBuffer, msgSize, afWaitAll, 0) == -1) {
+    if (ioRead(reader->socket, msgBuffer, msgSize, afWaitAll, 0) < 0) {
       fprintf(stderr, "<error> can't read message data, exiting..\n");
       break;
     }
@@ -175,18 +178,18 @@ void *mainProc(void *arg)
     }
     
     serializeString(writeStream, query.result);
-    aioWrite(reader->base, reader->socket, writeStream.data(), writeStream.sizeOf(), afNone, 0, 0, 0);
+    aioWrite(reader->socket, writeStream.data(), writeStream.sizeOf(), afNone, 0, 0, 0);
   }
 
   deleteAioObject(reader->socket);
 }
 
-void *listenerProc(void *arg)
+void listenerProc(void *arg)
 {
   listenerContext *ctx = (listenerContext*)arg;
   while (true) {
     HostAddress address;
-    socketTy acceptSocket = ioAccept(ctx->base, ctx->socket, 0);
+    socketTy acceptSocket = ioAccept(ctx->socket, 0);
     if (acceptSocket != INVALID_SOCKET) {
       readerContext *reader = new readerContext;
       reader->base = ctx->base;

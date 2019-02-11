@@ -2,7 +2,7 @@
 #include <string>
 
 class p2pNode;
-class ServiceContext;
+struct ServiceContext;
 class QueryImpl;
 
 int rawCmp(RawData data, const char *S);
