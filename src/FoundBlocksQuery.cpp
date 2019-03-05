@@ -1,6 +1,7 @@
 #include "FoundBlocksQuery.h"
 #include "p2putils/strExtras.h"
 #include <jansson.h>
+#include "loguru.hpp"
 
 static const char *unitType(UnitType type)
 {
@@ -62,7 +63,7 @@ void FoundBlocksQuery::setArg(RawData name, RawData value)
     _count = xatoi<unsigned>(value);
   } else {
     std::string _name((const char*)name.data, name.size);
-    fprintf(stderr, "<warning> foundBlocksQuery: unknown argument %s\n", _name.c_str());
+    LOG_F(WARNING, "foundBlocksQuery: unknown argument %s", _name.c_str());
   }
 }
 
@@ -99,7 +100,7 @@ void ClientInfoQuery::setArg(RawData name, RawData value)
     _userId.assign((const char*)value.data, value.size);
   } else {
     std::string _name((const char*)name.data, name.size);    
-    fprintf(stderr, "<warning> payoutsQuery: unknown argument %s\n", _name.c_str());
+    LOG_F(WARNING, "<warning> payoutsQuery: unknown argument %s", _name.c_str());
   }
 }
 

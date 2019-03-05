@@ -7,7 +7,7 @@ __NO_DEPRECATED_BEGIN
 __NO_DEPRECATED_END
 
 #include "FoundBlocksQuery.h"
-
+#include "loguru.hpp"
 
 
 
@@ -106,18 +106,18 @@ void mainProc(void *arg)
   xmstream writeStream;
   while (true) {
     if (ioRead(reader->socket, &msgSize, 8, afWaitAll, 0) < 0) {
-      fprintf(stderr, "<error> can't read message size, exiting..\n");
+      LOG_F(ERROR, "can't read message size, exiting..");
       break;
     }
     
     msgSize = xhton(msgSize);
     if (msgSize > sizeof(msgBuffer)) {
-      fprintf(stderr, "<error> too big message\n");
+      LOG_F(ERROR, "too big message");
       break;
     }
     
     if (ioRead(reader->socket, msgBuffer, msgSize, afWaitAll, 0) < 0) {
-      fprintf(stderr, "<error> can't read message data, exiting..\n");
+      LOG_F(ERROR, "can't read message data, exiting..");
       break;
     }
     
@@ -145,7 +145,7 @@ void mainProc(void *arg)
           deserializeString(stream, headerName);
           deserializeString(stream, headerValue);
           if (stream.eof()) {
-            fprintf(stderr, "<error> header decode failed\n");
+            LOG_F(ERROR, "header decode failed");
             break;
           }
           
@@ -157,7 +157,7 @@ void mainProc(void *arg)
         {
           deserializeString(stream, body);
           if (stream.eof()) {
-            fprintf(stderr, "<error> body failed\n");
+            LOG_F(ERROR, "<error> body failed");
             break;
           }
         
@@ -208,6 +208,21 @@ int main(int argc, char **argv)
     return 1;
   }
 
+  char logFileName[64];
+  {
+    auto t = time(nullptr);
+    auto now = localtime(&t);
+    snprintf(logFileName, sizeof(logFileName), "poolrestapi-%04u-%02u-%02u.log", now->tm_year + 1900, now->tm_mon + 1, now->tm_mday);
+  }
+
+  loguru::g_stderr_verbosity = loguru::Verbosity_OFF;
+  loguru::g_preamble_thread = false;
+  loguru::g_preamble_file = false;
+  loguru::g_flush_interval_ms = 100;
+  loguru::init(argc, argv);
+  loguru::add_file(logFileName, loguru::Append, loguru::Verbosity_INFO);
+  loguru::g_stderr_verbosity = 1;
+
   initializeSocketSubsystem();
   asyncBase *base = createAsyncBase(amOSDefault);
   
@@ -229,12 +244,12 @@ int main(int argc, char **argv)
       for (decltype(coinPeers.length()) peerIdx = 0; peerIdx < coinPeers.length(); peerIdx++) {
         URI uri;
         if (!uriParse(coinPeers[peerIdx], &uri)) {
-          fprintf(stderr, "<error> can't read coin %s peers from configuration file\n", coins[coinIdx]);
+          LOG_F(ERROR, "can't read coin %s peers from configuration file", coins[coinIdx]);
           return 1;
         }
       
         if (uri.schema != "p2p" || !uri.ipv4 || !uri.port) {
-          fprintf(stderr, "<error> %s coin peers can be contain only p2p://xxx.xxx.xxx.xxx:port address now\n", coins[coinIdx]);
+          LOG_F(ERROR, "<error> %s coin peers can be contain only p2p://xxx.xxx.xxx.xxx:port address now", coins[coinIdx]);
           return 1;
         }
         
@@ -252,12 +267,12 @@ int main(int argc, char **argv)
         URI uri;
         const char *listenAddress = cfg->lookupString("poolrestapi", "listenAddress");
         if (!uriParse(listenAddress, &uri)) {
-          fprintf(stderr, "<error> can't read listenAddress from configuration file\n");
+          LOG_F(ERROR, "<error> can't read listenAddress from configuration file");
           return 1;
         }
       
         if (uri.schema != "cxxrestapi" || !uri.ipv4 || !uri.port) {
-          fprintf(stderr, "<error> listenAddress can be contain only cxxrestapi://xxx.xxx.xxx.xxx:port address now\n");
+          LOG_F(ERROR, "<error> listenAddress can be contain only cxxrestapi://xxx.xxx.xxx.xxx:port address now");
           return 1;
         }
         
@@ -267,19 +282,19 @@ int main(int argc, char **argv)
       }
     }
   } catch(const config4cpp::ConfigurationException& ex){
-    fprintf(stderr, "<error> %s\n", ex.c_str());
+    LOG_F(ERROR, "%s", ex.c_str());
     exit(1);
   }
   
   socketTy hSocket = socketCreate(AF_INET, SOCK_STREAM, IPPROTO_TCP, 1);
   socketReuseAddr(hSocket);
   if (socketBind(hSocket, &localAddress) != 0) {
-    fprintf(stderr, "<error> cannot bind\n");
+    LOG_F(ERROR, "cannot bind");
     exit(1);
   }
 
   if (socketListen(hSocket) != 0) {
-    fprintf(stderr, "<error> listen error\n");
+    LOG_F(ERROR, "<error> listen error");
     exit(1);
   }
 
