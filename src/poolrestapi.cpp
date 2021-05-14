@@ -38,13 +38,13 @@ static inline void serializeString(xmstream &stream, const std::string &S)
 static inline void deserializeString(xmstream &stream, std::string &S)
 {
   size_t size = stream.read<uint32_t>();
-  const char *data = stream.jumpOver<const char>(size);
+  const char *data = stream.seek<const char>(size);
   if (data)
     S.assign(data, size);
 }
 
 
-void uriParse(URIComponent *component, void *arg)
+int uriParseProc(URIComponent *component, void *arg)
 {
   QueryContext *ctx = (QueryContext*)arg;
   switch (component->type) {
@@ -89,6 +89,8 @@ void uriParse(URIComponent *component, void *arg)
     default :
       break;
   }
+
+  return 1;
 }
 
 void findHandlerByUrl(QueryContext *query, ServiceContext *serviceCtx, const std::string &method, const std::string &url)
@@ -137,7 +139,7 @@ void mainProc(void *arg)
       std::string fullUrl = "http://host" + url;      // TODO: optimize uri parser
     
       query.apiId = method;    
-      uriParse(fullUrl.c_str(), uriParse, &query);
+      uriParse(fullUrl.c_str(), uriParseProc, &query);
       if (query.api && query.node) {
         // update headers
         unsigned headersNum = stream.read<uint32_t>();
